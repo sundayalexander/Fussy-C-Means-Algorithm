@@ -1,5 +1,9 @@
 package com.company;
 
+import javafx.application.Platform;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.scene.control.Label;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -8,7 +12,6 @@ import java.util.*;
 
 /**
  * This is a CMeans class
- *
  * @author: Amowe Sunday Alexander
  * @version:
  * @date: 2/9/2019 @1:49 PM
@@ -16,6 +19,9 @@ import java.util.*;
 public class CMeans {
     //Class properties goes here
     private Hashtable<Integer, ArrayList<Integer>> dataset;
+    private SimpleStringProperty outputStream;
+    private File report;
+    private Label status;
 
     /**
      * Constructor
@@ -38,7 +44,7 @@ public class CMeans {
         while(iterator.hasNext()){
             var record = iterator.next();
             if(!centroids.containsKey(record.get(record.size()-1))){
-                ArrayList<Integer> ids = new ArrayList();
+                ArrayList<Integer> ids = new ArrayList<>();
                 ids.add(record.get(0));
                 centroids.put(record.get(record.size()-1), ids);
             }else{
@@ -124,58 +130,74 @@ public class CMeans {
         return (((double)accuracy.size()/(double) this.dataset.size()) * 100);
     }
 
+    public void setStatus(Label status){
+        this.status = status;
+    }
+
     /**
      *
-     * @return
      */
     public void analyse() throws IOException {
         var start = System.currentTimeMillis();
+        Platform.runLater(()->{
+            this.status.setText("Status: Filtering data set...");
+        });
         long time = 0;
+        Platform.runLater(()->{
+            this.status.setText("Status: Computing Centroids..");
+        });
+        this.append(" \n");
         Iterator<ArrayList<Integer>> iterator = this.calculateCentroid().values().iterator();
         var centroidFound = false;
+        Platform.runLater(()->{
+            this.status.setText("Status: Centroids computed successfully..");
+        });
         while(iterator.hasNext()){
             if(iterator.next().size() > 1){
                 centroidFound = true;
             }
         }
+        this.show("Locating Centroid... ");
         if(centroidFound){
-            System.out.println("Clustering data set ...");
+            this.show("Clustering data set ...");
            var cluster = this.cluster(this.calculateCentroid());
-           System.out.println("Computing accuracy ...");
-            System.out.println(String.format("Accuracy = %.2f",this.accuracy(cluster))+"%");
+           this.show("Computing accuracy ...");
+            this.show(String.format("Accuracy = %.2f",this.accuracy(cluster))+"%");
         }else{
             double highestAccuracy = 0.0;
+            this.show("Clustering data set ...");
             var records = this.dataset.values().toArray();
             for(int i = 0; i < records.length; i++){
+                this.show("Clustering data: "+(i+1));
                 for (int j = i; j < records.length; j++) {
                     for (int k = j; k < records.length; k++) {
-                        var record1 = (ArrayList<Integer>)records[i];
-                        var record2 = (ArrayList<Integer>)records[j];
-                        var record3 = (ArrayList<Integer>)records[k];
+                        var record1 = (ArrayList)records[i];
+                        var record2 = (ArrayList)records[j];
+                        var record3 = (ArrayList)records[k];
                         Hashtable<Integer, ArrayList<Integer>> centroid  = new Hashtable<>();
                         //class 1
                         ArrayList<Integer> ids = new ArrayList<>();
-                        ids.add(record1.get(0));
+                        ids.add((Integer) record1.get(0));
                         centroid.put(1,ids);
 
                         //class 2
                         ids = new ArrayList<>();
-                        ids.add(record2.get(0));
+                        ids.add((Integer) record2.get(0));
                         centroid.put(2,ids);
 
                         //class 3
                         ids = new ArrayList<>();
-                        ids.add(record3.get(0));
+                        ids.add((Integer) record3.get(0));
                         centroid.put(3,ids);
                         var cluster = this.cluster(centroid);
                         var accuracy = this.accuracy(cluster);
                         if(highestAccuracy < accuracy){
                             highestAccuracy = accuracy;
-                            File file = new File("report.txt");
-                            if(!file.exists()){
-                                file.createNewFile();
+                            this.report = new File("report.txt");
+                            if(!this.report.exists()){
+                                this.report.createNewFile();
                             }
-                            BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+                            BufferedWriter writer = new BufferedWriter(new FileWriter(this.report));
                             ids = new ArrayList<>(cluster.keySet());
                             Collections.sort(ids);
                             var it = ids.iterator();
@@ -212,10 +234,47 @@ public class CMeans {
                         }
                     }
                 }
+                this.show("Clusters Computed successfully... \n");
             }
-            System.out.println(String.format("Accuracy = %.2f", highestAccuracy)+"%");
-            System.out.println("Time Taken: "+String.format("%.2f",(double)time/1000.0)+" seconds");
-            System.out.println("The analysis statistics has been dumped into report.txt");
+
+            this.append(String.format("Accuracy = %.2f", highestAccuracy)+"%");
+            this.append("Time Taken: "+String.format("%.2f",(double)time/1000.0)+" seconds");
+            this.append("The analysis statistics has been dumped into report.txt");
         }
+    }
+
+    /**
+     * This method sets the output Stream
+     * Channel.
+     */
+    protected void setOutputStream(SimpleStringProperty stringProperty){
+        this.outputStream = stringProperty;
+    }
+
+    /**
+     * This method appends a given message to the output
+     * stream.
+     * @param message
+     */
+    protected void append(String message){
+        this.outputStream.setValue(this.outputStream.getValue()+message+"\n");
+    }
+
+    /**
+     * This method returns the report file
+     * @return
+     */
+    protected File getReport(){
+        return  this.report;
+    }
+
+    /**
+     * This method displays the status of the cmeans
+     * @param message
+     */
+    protected void show(String message){
+        Platform.runLater(()->{
+            this.status.setText("Status: "+message);
+        });
     }
 }

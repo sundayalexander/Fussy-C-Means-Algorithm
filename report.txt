@@ -3,7 +3,7 @@
 total records: 130 records found!
 total clusters: 3 clusters found!
 Accuracy: 93.08%
-Time Taken: 26.90 seconds
+Time Taken: 27.84 seconds
 
 Id	|Cluster	|Original	|Accuracy
 ---------------------------------------------------------
